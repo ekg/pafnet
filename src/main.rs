@@ -65,9 +65,33 @@ impl PafFile {
         }
         println!("*arcs");
         for_each_line_in_paf(&self.paf_filename, |l: &str| {
-            let v: Vec<&str> = l.split("\t").collect();
-            println!("{} {}", self.get_id(v[0]), self.get_id(v[5]));
+            let q = l.split('\t').nth(0).unwrap().into();
+            let t = l.split('\t').nth(5).unwrap().into();
+            println!("{} {}", self.get_id(q), self.get_id(t));
         });
+    }
+    fn to_gexf(self: &PafFile) {
+        println!(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
+        println!(r#"<gexf xmlns="http://www.gexf.net/1.2draft" xmlns:viz="http://www.gexf.net/1.1draft/viz" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd" version="1.2">"#);
+        println!("<graph>");
+        println!("<nodes>");
+        for name in &self.names {
+            print!(r#"<node id="{}" label="{}">"#, self.get_id(&name), &name);
+            print!(r#"<viz:color r="239" g="173" b="66" a="0.6"/>"#);
+            println!(r#"</node>"#);
+        }
+        println!("</nodes>");
+        println!("<edges>");
+        let mut i = 1;
+        for_each_line_in_paf(&self.paf_filename, |l: &str| {
+            let q = l.split('\t').nth(0).unwrap().into();
+            let t = l.split('\t').nth(5).unwrap().into();
+            println!(r#"<edge id="{}" source="{}" target="{}" />"#, i, self.get_id(q), self.get_id(t));
+            i += 1;
+        });
+        println!("</edges>");
+        println!("</graph>");
+        println!("</gexf>");
     }
 }
 
@@ -81,6 +105,10 @@ fn main() -> io::Result<()> {
              .takes_value(true)
              .index(1)
              .help("input PAF file"))
+        .arg(Arg::with_name("gexf")
+             .short("g")
+             .long("gexf")
+             .help("Write GEXF format representing the pairs of sequences aligned in the PAF."))
         .arg(Arg::with_name("net")
              .short("n")
              .long("net")
@@ -99,6 +127,8 @@ fn main() -> io::Result<()> {
         paf.to_pajek_net();
     } else if matches.is_present("rewrite-paf") {
         paf.rewrite_with_ids();
+    } else if matches.is_present("gexf") {
+        paf.to_gexf();
     }
 
     Ok(())

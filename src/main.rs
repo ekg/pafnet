@@ -10,11 +10,12 @@ use boomphf::*;
 
 use dedup_by::dedup_by;
 
-fn for_each_line_in_paf(paf_filename: &str, mut callback: impl FnMut(&str)) {
+use std::collections::HashMap;
+
+fn for_each_line_in_file(paf_filename: &str, mut callback: impl FnMut(&str)) {
     let file = File::open(paf_filename).unwrap();
     let reader = BufReader::new(file);
     for line in reader.lines() {
-        //let l = line.unwrap();
         callback(&line.unwrap());
     }
 }
@@ -28,7 +29,7 @@ struct PafFile {
 impl PafFile {
     fn new(paf_filename: &str) -> Self {
         let mut names: Vec<String> = Vec::new();
-        for_each_line_in_paf(paf_filename, |l: &str| {
+        for_each_line_in_file(paf_filename, |l: &str| {
             names.push(l.split('\t').nth(0).unwrap().into());
             names.push(l.split('\t').nth(5).unwrap().into());
         });
@@ -45,7 +46,7 @@ impl PafFile {
         self.seq_name_mphf.hash(&name.to_string()) + 1
     }
     fn rewrite_with_ids(self: &PafFile) {
-        for_each_line_in_paf(&self.paf_filename, |l: &str| {
+        for_each_line_in_file(&self.paf_filename, |l: &str| {
             for (i, f) in l.split("\t").enumerate() {
                 if i == 0 {
                     print!("{}", self.get_id(f));
@@ -64,7 +65,7 @@ impl PafFile {
             println!("{} \"{}\"", self.get_id(&name), &name);
         }
         println!("*arcs");
-        for_each_line_in_paf(&self.paf_filename, |l: &str| {
+        for_each_line_in_file(&self.paf_filename, |l: &str| {
             let q = l.split('\t').nth(0).unwrap().into();
             let t = l.split('\t').nth(5).unwrap().into();
             println!("{} {}", self.get_id(q), self.get_id(t));
@@ -84,7 +85,7 @@ impl PafFile {
         println!("</nodes>");
         println!("<edges>");
         let mut i = 1;
-        for_each_line_in_paf(&self.paf_filename, |l: &str| {
+        for_each_line_in_file(&self.paf_filename, |l: &str| {
             let q = l.split('\t').nth(0).unwrap().into();
             let t = l.split('\t').nth(5).unwrap().into();
             println!(r#"<edge id="{}" source="{}" target="{}" />"#, i, self.get_id(q), self.get_id(t));
@@ -134,13 +135,52 @@ fn main() -> io::Result<()> {
 
     let paf = PafFile::new(filename);
 
+    let prefix_char = if matches.is_present("prefix-char") {
+        matches.value_of("prefix-char").unwrap()
+    } else {
+        ""
+    };
+
+    let mut colors = HashMap::new();
+    if matches.is_present("colors") {
+        let color_file = matches.value_of("colors").unwrap();
+        for_each_line_in_file(color_file, |l: &str| {
+            let mut name = "".to_string();
+            let mut r = 0;
+            let mut g = 0;
+            let mut b = 0;
+            for (i, f) in l.split_ascii_whitespace().enumerate() {
+                match i {
+                    0 => name = f.to_string(),
+                    1 => r = f.parse::<u16>().unwrap(),
+                    2 => g = f.parse::<u16>().unwrap(),
+                    3 => b = f.parse::<u16>().unwrap(),
+                    _ => {}
+                }
+            }
+            colors.insert(name, (r, g, b));
+        });
+    }
+
     if matches.is_present("net") {
         paf.to_pajek_net();
     } else if matches.is_present("rewrite-paf") {
         paf.rewrite_with_ids();
     } else if matches.is_present("gexf") {
-        paf.to_gexf(|_name: &str| {
-            (0, 0, 0)
+        paf.to_gexf(|name: &str| {
+            if colors.len() > 0 {
+                let q = if prefix_char == "" {
+                    name
+                } else {
+                    name.split(prefix_char).nth(0).unwrap()
+                };
+                match colors.get(q) {
+                    Some(color) => *color,
+                    None => (0, 0, 0)
+                }
+            } else {
+                (0, 0, 0)
+            }
         });
     }
 

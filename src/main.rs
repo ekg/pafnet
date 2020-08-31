@@ -70,14 +70,15 @@ impl PafFile {
             println!("{} {}", self.get_id(q), self.get_id(t));
         });
     }
-    fn to_gexf(self: &PafFile) {
+    fn to_gexf(self: &PafFile, mut get_color: impl FnMut(&str) -> (u16, u16, u16)) {
         println!(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
         println!(r#"<gexf xmlns="http://www.gexf.net/1.2draft" xmlns:viz="http://www.gexf.net/1.1draft/viz" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd" version="1.2">"#);
         println!("<graph>");
         println!("<nodes>");
         for name in &self.names {
             print!(r#"<node id="{}" label="{}">"#, self.get_id(&name), &name);
-            print!(r#"<viz:color r="239" g="173" b="66" a="0.6"/>"#);
+            let (r, g, b) = get_color(&name);
+            print!(r#"<viz:color r="{}" g="{}" b="{}" a="1.0"/>"#, r, g, b);
             println!(r#"</node>"#);
         }
         println!("</nodes>");
@@ -113,6 +114,16 @@ fn main() -> io::Result<()> {
              .short("n")
              .long("net")
              .help("Write Pajeck Net format representing the pairs of sequences aligned in the PAF."))
+        .arg(Arg::with_name("colors")
+             .short("c")
+             .long("colors")
+             .takes_value(true)
+             .help("Take colors for nodes from the "))
+        .arg(Arg::with_name("prefix-char")
+             .short("p")
+             .long("prefix-char")
+             .takes_value(true)
+             .help("Split each sequence name on this character, taking the prefix as a group identifier for coloring"))
         .arg(Arg::with_name("rewrite-paf")
              .short("r")
              .long("rewrite-paf")
@@ -128,7 +139,9 @@ fn main() -> io::Result<()> {
     } else if matches.is_present("rewrite-paf") {
         paf.rewrite_with_ids();
     } else if matches.is_present("gexf") {
-        paf.to_gexf();
+        paf.to_gexf(|_name: &str| {
+            (0, 0, 0)
+        });
     }
 
     Ok(())

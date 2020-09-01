@@ -71,6 +71,13 @@ impl PafFile {
             println!("{} {}", self.get_id(q), self.get_id(t));
         });
     }
+    fn to_edgelist(self: &PafFile) {
+        for_each_line_in_file(&self.paf_filename, |l: &str| {
+            let q = l.split('\t').nth(0).unwrap().into();
+            let t = l.split('\t').nth(5).unwrap().into();
+            println!("{} {}", self.get_id(q), self.get_id(t));
+        });
+    }
     fn to_gexf(self: &PafFile, mut get_color: impl FnMut(&str) -> (u16, u16, u16)) {
         println!(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
         println!(r#"<gexf xmlns="http://www.gexf.net/1.2draft" xmlns:viz="http://www.gexf.net/1.1draft/viz" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd" version="1.2">"#);
@@ -115,6 +122,10 @@ fn main() -> io::Result<()> {
              .short("n")
              .long("net")
              .help("Write Pajeck Net format representing the pairs of sequences aligned in the PAF."))
+        .arg(Arg::with_name("edgelist")
+             .short("e")
+             .long("edgelist")
+             .help("Write edge list representing the pairs of sequences aligned in the PAF."))
         .arg(Arg::with_name("colors")
              .short("c")
              .long("colors")
@@ -166,6 +177,8 @@ fn main() -> io::Result<()> {
         paf.to_pajek_net();
     } else if matches.is_present("rewrite-paf") {
         paf.rewrite_with_ids();
+    } else if matches.is_present("edgelist") {
+        paf.to_edgelist();
     } else if matches.is_present("gexf") {
         paf.to_gexf(|name: &str| {
             if colors.len() > 0 {

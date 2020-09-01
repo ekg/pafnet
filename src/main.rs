@@ -78,6 +78,11 @@ impl PafFile {
             println!("{} {}", self.get_id(q), self.get_id(t));
         });
     }
+    fn to_nodelist(self: &PafFile) {
+        for name in &self.names {
+            print!("{} {}", self.get_id(&name), &name);
+        }
+    }
     fn to_gexf(self: &PafFile, mut get_color: impl FnMut(&str) -> (u16, u16, u16)) {
         println!(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
         println!(r#"<gexf xmlns="http://www.gexf.net/1.2draft" xmlns:viz="http://www.gexf.net/1.1draft/viz" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd" version="1.2">"#);
@@ -126,6 +131,10 @@ fn main() -> io::Result<()> {
              .short("e")
              .long("edgelist")
              .help("Write edge list representing the pairs of sequences aligned in the PAF."))
+        .arg(Arg::with_name("nodelist")
+             .short("l")
+             .long("nodelist")
+             .help("Write the id to sequence name mapping."))
         .arg(Arg::with_name("colors")
              .short("c")
              .long("colors")
@@ -179,6 +188,8 @@ fn main() -> io::Result<()> {
         paf.rewrite_with_ids();
     } else if matches.is_present("edgelist") {
         paf.to_edgelist();
+    } else if matches.is_present("nodelist") {
+        paf.to_nodelist();
     } else if matches.is_present("gexf") {
         paf.to_gexf(|name: &str| {
             if colors.len() > 0 {

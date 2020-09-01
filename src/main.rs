@@ -80,7 +80,7 @@ impl PafFile {
     }
     fn to_nodelist(self: &PafFile) {
         for name in &self.names {
-            print!("{} {}", self.get_id(&name), &name);
+            println!("{} {}", self.get_id(&name), &name);
         }
     }
     fn to_gexf(self: &PafFile, mut get_color: impl FnMut(&str) -> (u16, u16, u16)) {

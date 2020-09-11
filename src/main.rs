@@ -139,7 +139,7 @@ fn main() -> io::Result<()> {
              .short("c")
              .long("colors")
              .takes_value(true)
-             .help("Take colors for nodes from the "))
+             .help("Take colors for nodes from the specified file. Each line begins with a group name, then R, G, B in [0,256). These colors will be applied to nodes in GEXF format."))
         .arg(Arg::with_name("prefix-char")
              .short("p")
              .long("prefix-char")
